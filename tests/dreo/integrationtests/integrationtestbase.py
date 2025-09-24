@@ -115,7 +115,7 @@ class IntegrationTestBase:
         logger.debug("Expected entity keys: %s", expected_keys)
         assert found_entity_keys == expected_keys
 
-    def get_entity_by_key(self, ha_entities: list, key: str) -> None:
+    def get_entity_by_key(self, ha_entities: list, key: str) -> Entity:
         """Verify the expected entities are present."""
         for ha_entity in ha_entities:
             if (ha_entity.entity_description.key == key):

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 class TestDreoAirConditioner(IntegrationTestBase):
-    """Test Dreo Ceiling Fan class and PyDreo together."""
+    """Test Dreo Air Conditioners class and PyDreo together."""
 
     def test_HAC001S(self):  # pylint: disable=invalid-name
         """Load air conditioner and test sending commands."""

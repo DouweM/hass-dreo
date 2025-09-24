@@ -14,6 +14,9 @@ import logging
 from .dreobasedevice import DreoBaseDeviceHA
 from .pydreo import PyDreo
 from .pydreo.pydreobasedevice import PyDreoBaseDevice
+from .pydreo.pydreochefmaker import PyDreoChefMaker
+from .pydreo.pydreoheater import PyDreoHeater
+
 from .pydreo.constant import (
     HUMIDITY_KEY,
     MODE_KEY,
@@ -49,14 +52,17 @@ from .pydreo.pydreochefmaker import (
 
 _LOGGER = logging.getLogger(LOGGER)
 
+from .dreoheater import (DreoHeaterHA)
+from .dreochefmaker import (DreoChefMakerHA)
+
 
 @dataclass
 class DreoSensorEntityDescription(SensorEntityDescription):
     """Describe Dreo sensor entity."""
 
-    value_fn: Callable[[DreoBaseDeviceHA], StateType] = None
-    exists_fn: Callable[[DreoBaseDeviceHA], bool] = None
-    native_unit_of_measurement_fn: Callable[[DreoBaseDeviceHA], str] = None
+    value_fn: Callable[[PyDreoBaseDevice], StateType] = None
+    exists_fn: Callable[[PyDreoBaseDevice], bool] = None
+    native_unit_of_measurement_fn: Callable[[PyDreoBaseDevice], str] = None
 
 
 SENSORS: tuple[DreoSensorEntityDescription, ...] = (
@@ -101,8 +107,16 @@ SENSORS: tuple[DreoSensorEntityDescription, ...] = (
         device_class=SensorDeviceClass.ENUM,
         options=[MODE_STANDBY, MODE_COOKING, MODE_OFF, MODE_PAUSED],
         value_fn=lambda device: device.mode,
-        exists_fn=lambda device: device.is_feature_supported(MODE_KEY),
+        exists_fn=lambda device: isinstance(device, PyDreoChefMaker) and device.is_feature_supported(MODE_KEY),
     ),
+    DreoSensorEntityDescription(
+        key="Status",
+        translation_key="status",
+        device_class=SensorDeviceClass.ENUM,
+        options=["coolair"],
+        value_fn=lambda device: device.mode,
+        exists_fn=lambda device: isinstance(device, PyDreoHeater) and device.is_feature_supported(MODE_KEY),
+    ),    
     DreoSensorEntityDescription(
         key="pm25",
         translation_key="pm25",
