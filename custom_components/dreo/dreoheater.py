@@ -171,17 +171,32 @@ class DreoHeaterHA(DreoBaseDeviceHA, ClimateEntity):
         _LOGGER.debug("DreoHeaterHA::oscangle(%s) -> %s", self.device.name, oscangle)
         self.device.oscangle = OSCANGLE_ANGLE_MAP[oscangle]
 
+    @property
+    def panel_sound(self) -> bool:
+        """Return the panel sound status."""
+        return self.device.panel_sound
+
+    @panel_sound.setter
     def panel_sound(self, panel_sound: bool) -> None:
         """Set the panel sound on/off"""
         _LOGGER.debug(
             "DreoHeaterHA::panel_sound(%s) --> %s", self.device.name, panel_sound
         )
-        self.device.muteon = not panel_sound
+        self.device.panel_sound = panel_sound
 
-    def muteon(self, muteon: bool) -> None:
-        """Set the panel sound on/off"""
-        _LOGGER.debug("DreoHeaterHA::muteon(%s) --> %s", self.device.name, muteon)
-        self.device.muteon = muteon
+    @property
+    def heat_level(self) -> int:
+        """Return the heat level status."""
+        return self.device.htalevel
+
+    @heat_level.setter
+    def heat_level(self, value: int) -> None:
+        """Set the heat level on/off"""
+        _LOGGER.debug(
+            "DreoHeaterHA::heat_level(%s) --> %s", self.device.name, value
+        )
+        self.device.htalevel = value
+
 
     ### Implementation of climate methods
     @property

@@ -49,3 +49,20 @@ class TestDreoHeater(IntegrationTestBase):
 
             pydreo_heater.handle_server_update({ REPORTED_KEY: {MODE_KEY: "eco"} })
             assert heater_ha.hvac_mode == HVACMode.AUTO
+
+            with patch(PATCH_SEND_COMMAND) as mock_send_command:  
+                heater_ha.panel_sound = False
+                mock_send_command.assert_any_call(pydreo_heater, {MUTEON_KEY: True})
+
+            pydreo_heater.handle_server_update({ REPORTED_KEY: {MUTEON_KEY: False} })
+            assert heater_ha.panel_sound is True
+            
+            assert heater_ha.heat_level == 3
+
+            with patch(PATCH_SEND_COMMAND) as mock_send_command:  
+                heater_ha.heat_level = 2
+                mock_send_command.assert_any_call(pydreo_heater, {HTALEVEL_KEY: 2})
+
+            pydreo_heater.handle_server_update({ REPORTED_KEY: {HTALEVEL_KEY: 2} })
+            assert heater_ha.heat_level is 2
+
