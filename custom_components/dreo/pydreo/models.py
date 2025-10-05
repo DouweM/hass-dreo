@@ -24,6 +24,7 @@ from .constant import (
     PRESET_NONE,
     PRESET_ECO,
     PRESET_SLEEP,
+    VERTICAL_ANGLE_RANGE,
     DreoDeviceType
 )
 
@@ -123,7 +124,11 @@ SUPPORTED_DEVICES = {
     "DR-HPF": DreoDeviceDetails(device_type=DreoDeviceType.AIR_CIRCULATOR),
     "DR-HPF008S": DreoDeviceDetails(
         device_type=DreoDeviceType.AIR_CIRCULATOR,
-        device_ranges={SPEED_RANGE: (1, 9)}),
+        device_ranges=
+        {
+            SPEED_RANGE: (1, 9),
+            VERTICAL_ANGLE_RANGE: (-30, 90)
+        }),
 
     "DR-HPF007S": DreoDeviceDetails(
         device_type=DreoDeviceType.AIR_CIRCULATOR,

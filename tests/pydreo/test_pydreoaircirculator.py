@@ -83,7 +83,8 @@ class TestPyDreoAirCirculator(TestBase):
         assert fan.horizontally_oscillating is False
         assert fan.oscillating is False
         assert fan.temperature == 74
-
+        assert fan.vertical_angle_range == (-30, 90)
+        
         with patch(PATCH_SEND_COMMAND) as mock_send_command:
             fan.is_on = True
             mock_send_command.assert_called_once_with(fan, {FANON_KEY: True})
