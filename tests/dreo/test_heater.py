@@ -1,13 +1,11 @@
 """Tests for the Dreo Ceiling heater HA class."""
 
-from custom_components.dreo import climate
-from .testdevicebase import TestDeviceBase
-from .custommocks import PyDreoDeviceMock
 
 from homeassistant.components.climate import (
     HVACMode
 )
 
+from custom_components.dreo import climate
 from custom_components.dreo.pydreo.constant import (
     HEATER_MODE_COOLAIR,
     HEATER_MODE_HOTAIR,
@@ -17,6 +15,11 @@ from custom_components.dreo.pydreo.constant import (
     ECOLEVEL_RANGE,
     HeaterOscillationAngles
 )
+
+from .testdevicebase import TestDeviceBase
+from .custommocks import PyDreoDeviceMock
+
+
 
 class TestDreoHeaterHA(TestDeviceBase):
     """Test the Dreo Ceiling heater HA class."""

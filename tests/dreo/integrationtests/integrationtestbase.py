@@ -122,5 +122,3 @@ class IntegrationTestBase:
             if (ha_entity.entity_description.key == key):
                 return ha_entity
         return None
-
-

@@ -2,13 +2,13 @@
 # pylint: disable=used-before-assignment
 import logging
 from unittest.mock import patch
-from custom_components.dreo import dreoheater
-from custom_components.dreo import sensor
-from custom_components.dreo import number
-
 from homeassistant.components.climate import (
     HVACMode
 )
+
+from custom_components.dreo import dreoheater
+from custom_components.dreo import sensor
+from custom_components.dreo import number
 
 from  .imports import * # pylint: disable=W0401,W0614
 from .integrationtestbase import PATCH_SEND_COMMAND, IntegrationTestBase
@@ -49,6 +49,3 @@ class TestDreoHeater(IntegrationTestBase):
 
             pydreo_heater.handle_server_update({ REPORTED_KEY: {MODE_KEY: "eco"} })
             assert heater_ha.hvac_mode == HVACMode.AUTO
-
-
-

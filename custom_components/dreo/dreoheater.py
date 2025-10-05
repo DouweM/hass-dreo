@@ -172,12 +172,14 @@ class DreoHeaterHA(DreoBaseDeviceHA, ClimateEntity):
         self.device.oscangle = OSCANGLE_ANGLE_MAP[oscangle]
 
     def panel_sound(self, panel_sound: bool) -> None:
+        """Set the panel sound on/off"""
         _LOGGER.debug(
             "DreoHeaterHA::panel_sound(%s) --> %s", self.device.name, panel_sound
         )
         self.device.muteon = not panel_sound
 
     def muteon(self, muteon: bool) -> None:
+        """Set the panel sound on/off"""
         _LOGGER.debug("DreoHeaterHA::muteon(%s) --> %s", self.device.name, muteon)
         self.device.muteon = muteon
 
