@@ -9,24 +9,30 @@ REGION_KEY = "region"
 DATA_KEY = "data"
 LIST_KEY = "list"
 MIXED_KEY = "mixed"
-DEVICEID_KEY = "deviceid"
 DEVICESN_KEY = "deviceSn"
 REPORTED_KEY = "reported"
 STATE_KEY = "state"
-POWERON_KEY = "poweron"
-WINDTYPE_KEY = "windtype"
-WINDLEVEL_KEY = "windlevel"
+
+# Field name mappings - old API → new API
+# These are for backward compatibility with test data and websocket updates
+WINDTYPE_KEY = "windtype"  # Old API, new API uses "mode" (string)
+MODE_KEY_NEW = "mode"  # New API (string value)
+WINDLEVEL_KEY = "windlevel"  # Old API, new API uses "speed"
+SPEED_KEY = "speed"  # New API
 MODE_KEY = "mode"
 HTALEVEL_KEY = "htalevel"
 OSCON_KEY = "oscon"
 OSCMODE_KEY = "oscmode"
+OSCILLATE_KEY = "oscillate"  # New API for shakehorizon
 OSCANGLE_KEY = "oscangle"
 CRUISECONF_KEY = "cruiseconf"
 TEMPERATURE_KEY = "temperature"
 TARGET_TEMPERATURE_KEY = "templevel"
 SLEEPTEMPOFFSET_KEY = "sleeptempoffset"
-VOICEON_KEY = "voiceon"
-LEDALWAYSON_KEY = "ledalwayson"
+VOICEON_KEY = "voiceon"  # Old API
+MUTE_SWITCH_KEY = "mute_switch"  # New API (inverted from voiceon)
+LEDALWAYSON_KEY = "ledalwayson"  # Old API
+LED_SWITCH_KEY = "led_switch"  # New API (inverted from ledalwayson)
 LIGHTSENSORON_KEY = "lightsensoron"
 MUTEON_KEY = "muteon"
 PM25_KEY = "pm25"
@@ -57,7 +63,6 @@ SCHEDULE_ENABLE = 'scheon'
 PREFERENCE_TYPE_TEMPERATURE_CALIBRATION = "Temperature Calibration"  # ID: 250
 
 # Tower Fans
-SHAKEHORIZON_KEY = "shakehorizon"
 SHAKEHORIZONANGLE_KEY = "shakehorizonangle"
 
 # Ceiling Fan
@@ -65,7 +70,7 @@ FANON_KEY = "fanon"
 
 
 DREO_API_URL_FORMAT = (
-    "https://app-api-{0}.dreo-tech.com"  # {0} is the 2 letter region code
+    "https://open-api-{0}.dreo-tech.com"  # {0} is the 2 letter region code
 )
 
 DREO_API_PATH = "path"
@@ -86,7 +91,7 @@ DREO_APIS = {
         DREO_API_METHOD: "post",
     },
     DREO_API_DEVICELIST: {
-        DREO_API_PATH: "/api/v2/user-device/device/list",
+        DREO_API_PATH: "/api/device/list",
         DREO_API_METHOD: "get",
     },
     DREO_API_DEVICESTATE: {
@@ -175,12 +180,12 @@ class TemperatureUnit(Enum):
     FAHRENHEIT = 1
 
 # Fan oscillation modes
-class OscillationMode(IntEnum):
+class OscillationMode(StrEnum):
     """Possible oscillation modes.  These are bitwise flags."""
-    OFF = 0,
-    HORIZONTAL = 1,
-    VERTICAL = 2,
-    BOTH = 3
+    OFF = "off"
+    HORIZONTAL = "horizontal"
+    VERTICAL = "vertical"
+    BOTH = "both"
 
 # Heater oscillation modes
 class HeaterOscillationAngles(StrEnum):
@@ -215,24 +220,6 @@ PRESET_ECO = "eco"
 
 # Device is running in sleep mode
 PRESET_SLEEP = "sleep"
-
-PRESET_MODE_STRINGS = {
-    "device_fans_mode_straight": "normal",
-    "device_fans_mode_natural": "natural",
-    "device_control_mode_sleep": "sleep",
-    "device_fans_mode_sleep": "sleep",
-    "device_fans_mode_auto": "auto",
-    "device_control_mode_auto": "auto",
-    "device_control_mode_turbo": "turbo",
-    "base_reverse": "reverse",
-    "device_control_custom": "custom",
-    "fan_2in1_breeze": "2-in-1 Breeze Mode",
-    "device_control_mode_manual": "manual",
-    "device_heater_mode_heat": "Heat",
-    "device_heater_mode_eco": "Eco",
-    "device_heater_mode_fan_only": "Cool Air",
-}
-
 
 class DreoDeviceType(StrEnum):
     """Product names for Dreo devices"""

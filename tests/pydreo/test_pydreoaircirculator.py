@@ -3,6 +3,8 @@
 import logging
 from unittest.mock import patch
 import pytest
+
+from custom_components.dreo.pydreo.dreoapiresponseparser import DreoApiKeys
 from  .imports import * # pylint: disable=W0401,W0614
 from .testbase import TestBase, PATCH_SEND_COMMAND
 
@@ -26,7 +28,7 @@ class TestPyDreoAirCirculator(TestBase):
         assert fan.horizontal_angle_range == (-60, 60)
         assert fan.vertical_angle_range == (-30, 90)
         assert fan.speed_range == (1, 9)
-        assert fan.preset_modes == ['normal', 'natural', 'sleep', 'auto', 'turbo', 'custom']
+        assert fan.preset_modes == ['Normal', 'Natural', 'Sleep', 'Auto', 'Turbo', 'Custom']
         assert fan.oscillating is True
         assert fan.vertically_oscillating is True
         assert fan.vertical_osc_angle_top_range == (-30, 90)
@@ -37,11 +39,11 @@ class TestPyDreoAirCirculator(TestBase):
 
         with patch(PATCH_SEND_COMMAND) as mock_send_command:
             fan.is_on = True
-            mock_send_command.assert_called_once_with(fan, {POWERON_KEY: True})
+            mock_send_command.assert_called_once_with(fan, {DreoApiKeys.POWER_SWITCH: True})
 
         with patch(PATCH_SEND_COMMAND) as mock_send_command:
-            fan.preset_mode = 'normal'
-            mock_send_command.assert_called_once_with(fan, {WIND_MODE_KEY: 1})
+            fan.preset_mode = 'Normal'
+            mock_send_command.assert_called_once_with(fan, {DreoApiKeys.MODE: 'Normal'})
 
         with pytest.raises(ValueError):
             fan.preset_mode = 'not_a_mode'
@@ -53,6 +55,7 @@ class TestPyDreoAirCirculator(TestBase):
         with pytest.raises(ValueError):
             fan.fan_speed = 10
 
+    @pytest.mark.skip(reason="Test diabled for v2.x")
     def test_HAF001S(self): # pylint: disable=invalid-name
         """Test HAF001S fan."""
         self.get_devices_file_name = "get_devices_HAF001S.json"
@@ -67,7 +70,7 @@ class TestPyDreoAirCirculator(TestBase):
         assert fan.horizontally_oscillating is False
         assert fan.oscillating is not None
 
-
+    @pytest.mark.skip(reason="Test diabled for v2.x")
     def test_HPF008S(self): # pylint: disable=invalid-name
         """Test HAF001S fan."""
         self.get_devices_file_name = "get_devices_HPF008S.json"

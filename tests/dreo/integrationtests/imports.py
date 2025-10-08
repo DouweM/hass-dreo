@@ -4,3 +4,4 @@ import sys
 import importlib.util
 from typing import TYPE_CHECKING
 from custom_components.dreo.pydreo import *
+from custom_components.dreo.pydreo.dreoapiresponseparser import DreoApiKeys # pylint: disable=unused-import

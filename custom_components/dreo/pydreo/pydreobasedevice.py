@@ -4,7 +4,8 @@ import logging
 from typing import Dict
 from typing import TYPE_CHECKING
 
-from .constant import LOGGER_NAME, REPORTED_KEY, POWERON_KEY, STATE_KEY, PRESET_MODE_STRINGS
+from .constant import LOGGER_NAME, REPORTED_KEY
+from .dreoapiresponseparser import DreoApiKeys
 from .models import DreoDeviceDetails
 
 if TYPE_CHECKING:
@@ -33,7 +34,8 @@ class PyDreoBaseDevice(object):
         self._device_definition = device_definition
         self._name = details.get("deviceName", None)
         self._device_id = details.get("deviceId", None)
-        self._sn = details.get("sn", None)
+        # Support both old API ("sn") and new API ("deviceSn") field names
+        self._sn = details.get("deviceSn", details.get("sn", None))
         self._brand = details.get("brand", None)
         self._model = details.get("model", None)
         self._product_id = details.get("productId", None)
@@ -102,15 +104,6 @@ class PyDreoBaseDevice(object):
         _LOGGER.debug("PyDreoBaseDevice:get_setting: %s -> %s", setting_name, setting_val)
         return setting_val
     
-    def get_mode_string(self, mode_id: str) -> str:
-        """Get the mode string from the device definition."""
-        if (mode_id in PRESET_MODE_STRINGS):
-            text = PRESET_MODE_STRINGS[mode_id]
-        else:
-            text = mode_id
-
-        return text
-    
     def handle_server_update_base(self, message):
         """Initial method called when we get a WebSocket message."""
         _LOGGER.debug("{%s}: got {%s} message **", self.name, message)
@@ -140,17 +133,24 @@ class PyDreoBaseDevice(object):
         self._dreo.set_device_setting(self, setting_key, value)
 
     def get_state_update_value(self, state: dict, key: str):
-        """Get a value from the state update in a safe manner."""
+        """Get a value from the state update in a safe manner.
+
+        Handles both old API format (nested with timestamps) and new API format (flat).
+        Also checks alternate field names for backward compatibility.
+        """
+       
+        # Try the requested key first
         if key in state:
-            key_val_object: dict = state[key]
+            key_val_object = state[key]
             if key_val_object is not None:
+                # New API format: {"key": value}
                 _LOGGER.debug(
                     "pyDreoBaseDevice(%s):get_state_update_value: %s-> %s",
                     self,
                     key,
-                    key_val_object[STATE_KEY],
+                    key_val_object,
                 )
-                return key_val_object[STATE_KEY]
+                return key_val_object
 
         _LOGGER.debug("State value (%s) not present.  Device: %s", key, self.name)
         return None
@@ -174,7 +174,7 @@ class PyDreoBaseDevice(object):
         _LOGGER.debug("pyDreoBaseDevice:update_state: %s", state)
 
         # TODO: Inconsistent placement of POWERON between BaseDevice and Fan for State/WebSocket
-        self._is_on = self.get_state_update_value(state, POWERON_KEY)
+        self._is_on = self.get_state_update_value(state, DreoApiKeys.POWER_SWITCH)
 
     def add_attr_callback(self, cb):
         """Add a callback to be called by _do_callbacks."""

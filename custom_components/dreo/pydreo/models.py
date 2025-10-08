@@ -59,9 +59,6 @@ class DreoDeviceDetails:
     device_type: DreoDeviceType
     """The type of device"""
 
-    preset_modes: list[str]
-    """List of possible preset mode names"""
-
     device_ranges: dict[range]
     """Dictionary of different ranges"""
 
@@ -80,7 +77,6 @@ class DreoDeviceDetails:
     def __init__(
         self,
         device_type: DreoDeviceType = None,
-        preset_modes: list[str] = None,
         device_ranges: dict = None,
         hvac_modes: list[str] = None,
         swing_modes: list[str] = None,
@@ -92,7 +88,6 @@ class DreoDeviceDetails:
             raise ValueError("device_type is required")
 
         self.device_type = device_type
-        self.preset_modes = preset_modes
         self.device_ranges = device_ranges
         self.hvac_modes = hvac_modes
         self.swing_modes = swing_modes
@@ -121,6 +116,14 @@ SUPPORTED_DEVICES = {
 
     # Air Circulators
     "DR-HAF": DreoDeviceDetails(device_type=DreoDeviceType.AIR_CIRCULATOR),
+
+    "DR-HAF004S": DreoDeviceDetails(
+        device_type=DreoDeviceType.AIR_CIRCULATOR,
+        device_ranges={
+            HORIZONTAL_ANGLE_RANGE: (-60, 60),
+            VERTICAL_ANGLE_RANGE: (-30,90)
+        }),
+
     "DR-HPF": DreoDeviceDetails(device_type=DreoDeviceType.AIR_CIRCULATOR),
     "DR-HPF008S": DreoDeviceDetails(
         device_type=DreoDeviceType.AIR_CIRCULATOR,
@@ -313,7 +316,6 @@ SUPPORTED_DEVICES = {
             HEATER_MODE_OFF,
         ],
         swing_modes=[SWING_OFF, SWING_ON],
-        preset_modes=[PRESET_NONE, PRESET_ECO, PRESET_SLEEP],
         # TODO Add fan modes, windlevel: 1,2,3,4 (Auto)
         fan_modes=[FAN_LOW, FAN_MEDIUM, FAN_HIGH, FAN_AUTO],
     ),

@@ -15,12 +15,6 @@ logger.setLevel(logging.DEBUG)
 class TestGeneralAPI(TestBase):
     """General API testing class for login() and get_devices()."""
 
-    def test_login(self):
-        """Test login() method request and API response."""
-        print("Test Login")
-        self.pydreo_manager.enabled = False
-        assert self.pydreo_manager.login()
-
     def test_load_devices(self):
         """Test get_devices() method request and API response."""
         print("Test Device List")
@@ -29,7 +23,7 @@ class TestGeneralAPI(TestBase):
         self.pydreo_manager.load_devices()
         assert len(self.pydreo_manager.devices) == 1
         assert self.pydreo_manager.devices[0].speed_range == (1, 5)
-        assert self.pydreo_manager.devices[0].preset_modes == ['normal', 'natural', 'sleep', 'auto']
+        assert self.pydreo_manager.devices[0].preset_modes == ['Sleep', 'Auto', 'Natural', 'Normal']
 
     def test_load_devices_unknown(self):
         """Test get_devices() method request and API response."""

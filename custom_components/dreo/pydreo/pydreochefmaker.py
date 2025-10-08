@@ -3,9 +3,9 @@ import logging
 from typing import Dict, TYPE_CHECKING
 
 from .constant import (
-    LOGGER_NAME,
-    POWERON_KEY,
+    LOGGER_NAME
 )
+from .dreoapiresponseparser import DreoApiKeys
 from .models import DreoDeviceDetails
 
 from .pydreobasedevice import PyDreoBaseDevice
@@ -48,7 +48,7 @@ class PyDreoChefMaker(PyDreoBaseDevice):
         """Set the power state of the device."""
         self._is_on = value
         self.set_mode_from_is_on()
-        self._send_command(POWERON_KEY, value)
+        self._send_command(DreoApiKeys.POWER_SWITCH, value)
 
     @property
     def ledpotkepton(self) -> bool:
@@ -85,7 +85,7 @@ class PyDreoChefMaker(PyDreoBaseDevice):
 
         _LOGGER.debug("PyDreoChefMaker(%s):update_state: %s", self, state)
 
-        self._is_on = self.get_state_update_value(state, POWERON_KEY)
+        self._is_on = self.get_state_update_value(state, DreoApiKeys.POWER_SWITCH)
         self.set_mode_from_is_on()
         self._ledpotkepton = self.get_state_update_value(state, LIGHT_KEY)
 
@@ -98,7 +98,7 @@ class PyDreoChefMaker(PyDreoBaseDevice):
             "PyDreoChefMaker:handle_server_update(%s): %s", self.name, message
         )
 
-        val_poweron = self.get_server_update_key_value(message, POWERON_KEY)
+        val_poweron = self.get_server_update_key_value(message, DreoApiKeys.POWER_SWITCH)
         if isinstance(val_poweron, bool):
             _LOGGER.debug(
                 "PyDreoChefMaker:handle_server_update - poweron: %s --> %s",

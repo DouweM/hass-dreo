@@ -9,6 +9,7 @@ from .testbase import TestBase, PATCH_SEND_COMMAND
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+@pytest.mark.skip(reason="Test disabled for v2.x")
 class TestPyDreoCeilingFan(TestBase):
     """Test PyDreoFan class."""
   

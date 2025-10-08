@@ -7,7 +7,6 @@ from .constant import (
     LOGGER_NAME,
     MODE_KEY,
     MUTEON_KEY,
-    POWERON_KEY,
     HUMIDITY_KEY,
     WINDLEVEL_KEY,
     CHILDLOCKON_KEY,
@@ -16,6 +15,7 @@ from .constant import (
     TEMPERATURE_KEY
 )
 
+from .dreoapiresponseparser import DreoApiKeys
 from .pydreobasedevice import PyDreoBaseDevice
 from .models import DreoDeviceDetails
 
@@ -58,7 +58,7 @@ class PyDreoDehumidifier(PyDreoBaseDevice):
     def is_on(self, value: bool):
         """Set if the dehumidifier is on or off"""
         _LOGGER.debug("PyDreoDehumidifier:is_on.setter - %s", value)
-        self._send_command(POWERON_KEY, value)
+        self._send_command(DreoApiKeys.POWER_SWITCH, value)
 
     @property
     def modes(self) -> list[str]:
@@ -239,7 +239,7 @@ class PyDreoDehumidifier(PyDreoBaseDevice):
         """Process a websocket update"""
         _LOGGER.debug("PyDreoDehumidifier:handle_server_update(%s): %s", self.name, message)
 
-        val_poweron = self.get_server_update_key_value(message, POWERON_KEY)
+        val_poweron = self.get_server_update_key_value(message, DreoApiKeys.POWER_SWITCH)
         if isinstance(val_poweron, bool):
             self._is_on = val_poweron
             _LOGGER.debug("PyDreoDehumidifier:handle_server_update - poweron is %s", self._is_on)

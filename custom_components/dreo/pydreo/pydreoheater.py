@@ -11,7 +11,6 @@ from .constant import (
     OSCON_KEY,
     OSCANGLE_KEY,
     MUTEON_KEY,
-    POWERON_KEY,
     DEVON_KEY,
     TIMERON_KEY,
     COOLDOWN_KEY,
@@ -30,6 +29,7 @@ from .constant import (
     HeaterOscillationAngles
 )
 
+from .dreoapiresponseparser import DreoApiKeys
 from .pydreobasedevice import PyDreoBaseDevice
 from .models import DreoDeviceDetails, HEAT_RANGE, ECOLEVEL_RANGE
 
@@ -91,7 +91,7 @@ class PyDreoHeater(PyDreoBaseDevice):
     def poweron(self, value: bool):
         """Set if the heater is on or off"""
         _LOGGER.debug("PyDreoHeater:poweron.setter - %s", value)
-        self._send_command(POWERON_KEY, value)
+        self._send_command(DreoApiKeys.POWER_SWITCH, value)
 
     @property
     def htalevel_range(self):
@@ -335,7 +335,7 @@ class PyDreoHeater(PyDreoBaseDevice):
             self._htalevel = val_htalevel
 
         # no base class method to handle _is_on
-        val_power_on = self.get_server_update_key_value(message, POWERON_KEY)
+        val_power_on = self.get_server_update_key_value(message, DreoApiKeys.POWER_SWITCH)
         if isinstance(val_power_on, bool):
             self._is_on = val_power_on
             if not self._is_on:

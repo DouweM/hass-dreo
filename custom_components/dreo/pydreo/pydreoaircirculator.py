@@ -81,36 +81,6 @@ class PyDreoAirCirculator(PyDreoFanBase):
 
         return -zero_angle, angle - zero_angle
 
-    def parse_preset_modes(self, details: Dict[str, list]) -> tuple[str, int]:
-        """Parse the preset modes from the details."""
-        preset_modes = []
-        controls_conf = details.get("controlsConf", None)
-        if controls_conf is not None:
-            control = controls_conf.get("control", None)
-            if (control is not None):
-                for control_item in control:
-                    if (control_item.get("type", None) == "Mode"):
-                        for mode_item in control_item.get("items", None):
-                            text = self.get_mode_string(mode_item.get("text", None))
-                            value = mode_item.get("value", None)
-                            preset_modes.append((text, value))
-            schedule = controls_conf.get("schedule", None)
-            if (schedule is not None):
-                modes = schedule.get("modes", None)
-                if (modes is not None):
-                    for mode_item in modes:
-                        text = self.get_mode_string(mode_item.get("title", None))
-                        value = mode_item.get("value", None)
-                        if (text, value) not in preset_modes:
-                            preset_modes.append((text, value))
-
-        preset_modes.sort(key=lambda tup: tup[1])  # sorts in place
-        if (len(preset_modes) == 0):
-            _LOGGER.debug("PyDreoAirCirculator:No preset modes detected")
-            preset_modes = None
-        _LOGGER.debug("PyDreoAirCirculator:Detected preset modes - %s", preset_modes)
-        return preset_modes
-
     @property
     def horizontal_angle_range(self):
         """Get the horizontal swing angle range"""
@@ -149,13 +119,8 @@ class PyDreoAirCirculator(PyDreoFanBase):
     @property
     def horizontally_oscillating(self) -> bool:
         """Returns `True` if horizontal oscillation is on."""
-        if self._horizontally_oscillating is not None:
-            return self._horizontally_oscillating
         if self._osc_mode is not None:
-            return (self._osc_mode & OscillationMode.HORIZONTAL) != OscillationMode.OFF
-
-        # Note we do not consider a fan with JUST horizontal oscillation to have a seperate
-        # horizontal oscillation switch.
+            return (self._osc_mode == OscillationMode.HORIZONTAL) or (self._osc_mode == OscillationMode.BOTH)
         return None
 
     @horizontally_oscillating.setter
@@ -187,10 +152,8 @@ class PyDreoAirCirculator(PyDreoFanBase):
     @property
     def vertically_oscillating(self):
         """Returns `True` if vertical oscillation is on."""
-        if self._vertically_oscillating is not None:
-            return self._vertically_oscillating
         if self._osc_mode is not None:
-            return self._osc_mode & OscillationMode.VERTICAL != OscillationMode.OFF
+            return (self._osc_mode == OscillationMode.VERTICAL) or (self._osc_mode == OscillationMode.BOTH)
 
         return None
 
@@ -349,8 +312,6 @@ class PyDreoAirCirculator(PyDreoFanBase):
         _LOGGER.debug("PyDreoAirCirculator:update_state")
         super().update_state(state)
 
-        self._horizontally_oscillating = self.get_state_update_value(state, HORIZONTAL_OSCILLATION_KEY)
-        self._vertically_oscillating = self.get_state_update_value(state, VERTICAL_OSCILLATION_KEY)
         self._osc_mode = self.get_state_update_value(state, OSCMODE_KEY)
         self._cruise_conf = self.get_state_update_value(state, CRUISECONF_KEY)
         self._fixed_conf = self.get_state_update_value(state, FIXEDCONF_KEY)

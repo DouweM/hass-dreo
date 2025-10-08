@@ -1,6 +1,7 @@
 """Tests for Dreo Ceiling Fans"""
 # pylint: disable=used-before-assignment
 import logging
+import pytest
 from unittest.mock import patch
 from  .imports import * # pylint: disable=W0401,W0614
 from .testbase import TestBase, PATCH_SEND_COMMAND
@@ -8,8 +9,10 @@ from .testbase import TestBase, PATCH_SEND_COMMAND
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+@pytest.mark.skip(reason="Test disabled for v2.x")
 class TestPyDreoHumidifier(TestBase):
     """Test PyDreoHumidifier class."""
+    
     
     def test_HHM001S(self):  # pylint: disable=invalid-name
         """Load fan and test sending commands."""

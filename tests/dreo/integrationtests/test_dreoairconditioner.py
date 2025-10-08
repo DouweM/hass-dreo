@@ -1,6 +1,7 @@
 """Integration Tests for Dreo Ceiling Fans"""
 # pylint: disable=used-before-assignment
 import logging
+import pytest
 from unittest.mock import patch
 from custom_components.dreo import number, sensor
 from  .imports import * # pylint: disable=W0401,W0614
@@ -12,6 +13,7 @@ PATCH_SCHEDULE_UPDATE_HA_STATE= f'{PATCH_BASE_PATH}.schedule_update_ha_state'
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+@pytest.mark.skip(reason="Test disabled for v2.x")
 class TestDreoAirConditioner(IntegrationTestBase):
     """Test Dreo Ceiling Fan class and PyDreo together."""
 

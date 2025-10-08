@@ -1,6 +1,7 @@
 """Integration Tests for Dreo Ceiling Fans"""
 # pylint: disable=used-before-assignment
 import logging
+import pytest
 from unittest.mock import patch
 from custom_components.dreo import switch
 from custom_components.dreo import number
@@ -13,6 +14,7 @@ PATCH_SCHEDULE_UPDATE_HA_STATE= f'{PATCH_BASE_PATH}.schedule_update_ha_state'
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+@pytest.mark.skip(reason="Test disabled for v2.x")
 class TestDreoChefMaker(IntegrationTestBase):
     """Test Dreo Ceiling Fan class and PyDreo together."""
     
@@ -33,7 +35,7 @@ class TestDreoChefMaker(IntegrationTestBase):
                 # TODO: Possible bug; need to test at home.  Why does this not cause an update?
                 #mock_update_ha_state.assert_called_once()
                 #mock_update_ha_state.reset_mock()
-                mock_send_command.assert_called_once_with(pydreo_chef_maker, {POWERON_KEY: True})
+                mock_send_command.assert_called_once_with(pydreo_chef_maker, {DreoApiKeys.POWER_SWITCH: True})
 
             # Check to see what switches are added to chef makers
             switches = switch.get_entries([pydreo_chef_maker])

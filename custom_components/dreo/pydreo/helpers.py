@@ -24,14 +24,12 @@ class Helpers:
     def req_headers(pydreo_manager) -> dict:
         """Build header for api requests."""
         headers = {
-            "ua": "dreo/2.8.2",
-            "lang": "en",
+            "UA": "openapi/1.0.0",
             "content-type": "application/json; charset=UTF-8",
             "accept-encoding": "gzip",
-            "user-agent": "okhttp/4.9.1",
         }
         if pydreo_manager.token is not None:
-            headers["authorization"] = f"Bearer {pydreo_manager.token}"
+            headers["Authorization"] = f"Bearer {pydreo_manager.token}"
         return headers
 
     @staticmethod

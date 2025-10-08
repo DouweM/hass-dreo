@@ -10,10 +10,10 @@ from .constant import (
     WINDLEVEL_KEY,
     SPEED_RANGE,
     BRIGHTNESS_KEY,
-    COLORTEMP_KEY,
-    POWERON_KEY
+    COLORTEMP_KEY
 )
 
+from .dreoapiresponseparser import DreoApiKeys
 from .pydreofanbase import PyDreoFanBase
 from .models import DreoDeviceDetails
 
@@ -30,15 +30,6 @@ class PyDreoCeilingFan(PyDreoFanBase):
         """Initialize air devices."""
         super().__init__(device_definition, details, dreo)
         
-        self._speed_range = None
-        if (device_definition.device_ranges is not None):
-            self._speed_range = device_definition.device_ranges[SPEED_RANGE]
-        if (self._speed_range is None):
-            self._speed_range = self.parse_speed_range(details)
-        self._preset_modes = device_definition.preset_modes
-        if (self._preset_modes is None):
-            self._preset_modes = self.parse_preset_modes(details)
-
         self._fan_speed = None
         self._light_on : bool = None
         self._brightness : int = None
@@ -49,27 +40,6 @@ class PyDreoCeilingFan(PyDreoFanBase):
 
         self._device_definition = device_definition
     
-    def parse_preset_modes(self, details: Dict[str, list]) -> tuple[str, int]:
-        """Parse the preset modes from the details."""
-        preset_modes = []
-        controls_conf = details.get("controlsConf", None)
-        if controls_conf is not None:
-            control = controls_conf.get("control", None)
-            if (control is not None):
-                for control_item in control:
-                    if (control_item.get("type", None) == "CFFan"):
-                        for mode_item in control_item.get("items", None):
-                            text = self.get_mode_string(mode_item.get("text", None))
-                            value = mode_item.get("value", None)
-                            preset_modes.append((text, value))
-
-        preset_modes.sort(key=lambda tup: tup[1])  # sorts in place
-        if (len(preset_modes) == 0):
-            _LOGGER.debug("PyDreoFan:No preset modes detected")
-            preset_modes = None
-        _LOGGER.debug("PyDreoFan:Detected preset modes - %s", preset_modes)
-        return preset_modes
-
     @PyDreoFanBase.is_on.setter
     def is_on(self, value: bool):
         """Set if the fan is on or off"""
@@ -164,7 +134,7 @@ class PyDreoCeilingFan(PyDreoFanBase):
     def _handle_power_state_update(self, message):
         """Override power state handling for ceiling fans"""
         # Handle poweron: False = turn off entire device (both fan and light)
-        val_poweron = self.get_server_update_key_value(message, POWERON_KEY)
+        val_poweron = self.get_server_update_key_value(message, DreoApiKeys.POWER_SWITCH)
         if val_poweron is False:
             self._is_on = False
             self._light_on = False

@@ -28,7 +28,8 @@ KEYS_TO_REDACT = {
     "_username",
     "token",
     "_token",
-    "productId"
+    "productId",
+    "deviceSn",
 }
 
 _LOGGER = logging.getLogger(LOGGER)
@@ -53,25 +54,29 @@ def _get_diagnostics(pydreo_manager: PyDreo) -> dict[str, Any]:
 
     return data
 
-def _redact_values(data: dict) -> dict:
+def _redact_values(data: dict | list) -> dict | list:
     """Rebuild and redact values of a dictionary, recursively"""
 
-    new_data = {}
+    if isinstance(data, list):
+        return [_redact_values(item) for item in data]
+    
+    if isinstance(data, dict):
+        new_data = {}
 
-    for key, item in data.items():
-        if key not in KEYS_TO_REDACT:
-            if isinstance(item, dict):
-                new_data[key] = _redact_values(item)
-            elif isinstance(item, list):
-                new_data[key] = []
-                for listitem in item:
-                    if isinstance(listitem, dict):
-                        new_data[key].append(_redact_values(listitem))
-                    else:
-                        new_data[key].append(listitem)
+        for key, item in data.items():
+            if key not in KEYS_TO_REDACT:
+                if isinstance(item, dict):
+                    new_data[key] = _redact_values(item)
+                elif isinstance(item, list):
+                    new_data[key] = []
+                    for listitem in item:
+                        if isinstance(listitem, dict):
+                            new_data[key].append(_redact_values(listitem))
+                        else:
+                            new_data[key].append(listitem)
+                else:
+                    new_data[key] = item
             else:
-                new_data[key] = item
-        else:
-            new_data[key] = REDACTED
+                new_data[key] = REDACTED
 
-    return new_data
+        return new_data

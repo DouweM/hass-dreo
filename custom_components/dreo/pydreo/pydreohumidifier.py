@@ -7,13 +7,13 @@ from .constant import (
     LOGGER_NAME,
     MODE_KEY,
     MUTEON_KEY,
-    POWERON_KEY,
     HUMIDITY_KEY,
     TARGET_AUTO_HUMIDITY_KEY,
     RGB_LEVEL,
     SCHEDULE_ENABLE     
 )
 
+from .dreoapiresponseparser import DreoApiKeys
 from .helpers import Helpers
 
 
@@ -74,27 +74,6 @@ class PyDreoHumidifier(PyDreoBaseDevice):
         self._rgblevel = None
         self._scheon = None
         
-    def parse_modes(self, details: Dict[str, list]) -> tuple[str, int]:
-        """Parse the preset modes from the details."""
-        modes = []
-        controls_conf = details.get("controlsConf", None)
-        if controls_conf is not None:
-            schedule = controls_conf.get("schedule", None)
-            if (schedule is not None):
-                modes_node = schedule.get("modes", None)
-                if (modes_node is not None):
-                    for mode_item in modes_node:
-                        text = self.get_mode_string(mode_item.get("title", None))
-                        value = mode_item.get("value", None)
-                        modes.append((text, value))
-
-        modes.sort(key=lambda tup: tup[1])  # sorts in place
-        if (len(modes) == 0):
-            _LOGGER.debug("PyDreoHumidifier:No preset modes detected")
-            modes = None
-        _LOGGER.debug("PyDreoHumidifier:Detected preset modes - %s", modes)
-        return modes
-        
     @property
     def is_on(self):
         """Returns `True` if the device is on, `False` otherwise."""
@@ -104,7 +83,7 @@ class PyDreoHumidifier(PyDreoBaseDevice):
     def is_on(self, value: bool):
         """Set if the fan is on or off"""
         _LOGGER.debug("PyDreoHumidifier:is_on.setter - %s", value)
-        self._send_command(POWERON_KEY, value)
+        self._send_command(DreoApiKeys.POWER_SWITCH, value)
 
     @property
     def modes(self) -> list[str]:
@@ -201,7 +180,7 @@ class PyDreoHumidifier(PyDreoBaseDevice):
         """Process a websocket update"""
         _LOGGER.debug("PyDreoHumidifier:handle_server_update(%s): %s", self.name, message)
 
-        val_poweron = self.get_server_update_key_value(message, POWERON_KEY)
+        val_poweron = self.get_server_update_key_value(message, DreoApiKeys.POWER_SWITCH)
         if isinstance(val_poweron, bool):
             self._is_on = val_poweron  # Ensure poweron state is updated
             _LOGGER.debug("PyDreoHumidifier:handle_server_update - poweron is %s", self._is_on)

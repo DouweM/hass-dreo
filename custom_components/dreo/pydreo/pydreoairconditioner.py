@@ -11,7 +11,6 @@ from .constant import (
     MODE_KEY,
     OSCMODE_KEY,
     MUTEON_KEY,
-    POWERON_KEY,
     DEVON_KEY,
     TIMERON_KEY,
     COOLDOWN_KEY,
@@ -36,6 +35,7 @@ from .constant import (
     PRESET_ECO,
     PRESET_SLEEP
 )
+from .dreoapiresponseparser import DreoApiKeys
 from .pydreobasedevice import PyDreoBaseDevice
 from .models import DreoDeviceDetails
 
@@ -134,7 +134,7 @@ class PyDreoAC(PyDreoBaseDevice):
     def poweron(self, value: bool):
         """Set if the air conditioner is on or off"""
         _LOGGER.debug("PyDreoAC:poweron.setter - %s", value)
-        self._send_command(POWERON_KEY, value)
+        self._send_command(DreoApiKeys.POWER_SWITCH, value)
 
     @property
     def preset_modes(self):
@@ -396,7 +396,7 @@ class PyDreoAC(PyDreoBaseDevice):
         """Process a websocket update"""
         _LOGGER.debug("PyDreoAC:handle_server_update(%s): %s", self.name, message)
 
-        val_poweron = self.get_server_update_key_value(message, POWERON_KEY)
+        val_poweron = self.get_server_update_key_value(message, DreoApiKeys.POWER_SWITCH)
         if isinstance(val_poweron, bool):
             self._is_on = val_poweron  # Ensure poweron state is updated
             _LOGGER.debug("PyDreoAC:handle_server_update - poweron is %s", self._is_on)

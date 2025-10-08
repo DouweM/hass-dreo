@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Dict
 
 from .constant import (
     LOGGER_NAME,
-    POWERON_KEY,
     FANON_KEY,
     WINDLEVEL_KEY,
     TEMPERATURE_KEY,
@@ -24,6 +23,7 @@ from .constant import (
 from .pydreobasedevice import PyDreoBaseDevice
 from .models import DreoDeviceDetails
 from .helpers import Helpers
+from .dreoapiresponseparser import DreoApiResponseParser, DreoApiKeys
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
@@ -39,15 +39,9 @@ class PyDreoFanBase(PyDreoBaseDevice):
         super().__init__(device_definition, details, dreo)
         
         self._speed_range = None
-        # Check if the device has a speed range defined in the device definition
-        # If not, parse the speed range from the details
-        if device_definition.device_ranges is not None and SPEED_RANGE in device_definition.device_ranges:
-            self._speed_range = device_definition.device_ranges[SPEED_RANGE]
-        if (self._speed_range is None):
-            self._speed_range = self.parse_speed_range(details)
-        self._preset_modes = device_definition.preset_modes
-        if (self._preset_modes is None):
-            self._preset_modes = self.parse_preset_modes(details)
+        
+        self._speed_range = DreoApiResponseParser.get_config_range(details, DreoApiKeys.SPEED_RANGE)
+        self._preset_modes = DreoApiResponseParser.get_config_list(details, DreoApiKeys.PRESET_MODES)
 
         # Check to see if temperature calibration is supported.
         self._temperature_offset = None
@@ -57,9 +51,7 @@ class PyDreoFanBase(PyDreoBaseDevice):
         self._is_on = False
         self._power_on_key = None
         self._fan_speed = None
-
-        self._wind_type = None
-        self._wind_mode = None
+        self._preset_mode = None
 
         self._temperature = None
         self._led_always_on = None
@@ -67,45 +59,6 @@ class PyDreoFanBase(PyDreoBaseDevice):
         self._light_sensor_on = None
         self._mute_on = None
         self._pm25 = None
-
-    def parse_speed_range(self, details: Dict[str, list]) -> tuple[int, int]:
-        """Parse the speed range from the details."""
-        # There are a bunch of different places this could be, so we're going to look in
-        # multiple places.
-        speed_range : tuple[int, int] = None
-        controls_conf = details.get("controlsConf", None)
-        if controls_conf is not None:
-            extra_configs = controls_conf.get("extraConfigs")
-            if (extra_configs is not None):
-                _LOGGER.debug("PyDreoFan:Detected extraConfigs")
-                for extra_config_item in extra_configs:
-                    if extra_config_item.get("key", None) == "control":
-                        _LOGGER.debug("PyDreoFan:Detected extraConfigs/control")
-                        speed_range = self.parse_speed_range_from_control_node(extra_config_item.get("value", None))
-                        if (speed_range is not None):
-                            _LOGGER.debug("PyDreoFan:Detected speed range from extraConfig - %s", speed_range)
-                            return speed_range
-
-            control_node = controls_conf.get("control", None)
-            if (control_node is not None):
-                speed_range = self.parse_speed_range_from_control_node(control_node)
-                _LOGGER.debug("PyDreoFan:Detected speed range from controlsConf - %s", speed_range)
-                return speed_range
-        return None
-
-    def parse_speed_range_from_control_node(self, control_node) -> tuple[int, int]:
-        """Parse the speed range from a control node"""
-        for control_item in control_node:
-            if control_item.get("type", None) == "Speed":
-                speed_low = control_item.get("items", None)[0].get("value", None)
-                speed_high = control_item.get("items", None)[1].get("value", None)
-                speed_range = (speed_low, speed_high)
-                return speed_range
-        return None
-    
-    def parse_preset_modes(self, details: Dict[str, list]) -> tuple[str, int]:
-        """Parse the preset modes from the details."""
-        raise NotImplementedError
     
     @property
     def speed_range(self):
@@ -115,9 +68,7 @@ class PyDreoFanBase(PyDreoBaseDevice):
     @property
     def preset_modes(self) -> list[str]:
         """Get the list of preset modes"""
-        if self._preset_modes is None:
-            return None
-        return Helpers.get_name_list(self._preset_modes)
+        return self._preset_modes
     
     @property
     def is_on(self):
@@ -128,7 +79,7 @@ class PyDreoFanBase(PyDreoBaseDevice):
     def is_on(self, value: bool):
         """Set if the fan is on or off"""
         _LOGGER.debug("PyDreoFanBase:is_on.setter - %s", value)
-        self._send_command(self._power_on_key, value)
+        self._send_command("power_switch", value)
 
     @property
     def fan_speed(self):
@@ -148,40 +99,15 @@ class PyDreoFanBase(PyDreoBaseDevice):
     @property
     def preset_mode(self):
         """Return the current preset mode."""
-        """There seems to be a bug in HA fan entity where it does call into preset_mode even if the
-        preset_mode is not supported.  So we need to check if the preset mode is supported before
-        returning the value."""
-        if self._preset_modes is None:
-            return None
-        
-        mode = self._wind_mode
-        if mode is None:
-            mode = self._wind_type
-        if mode is None:
-            return None
-        
-        str_value : str = Helpers.name_from_value(self._preset_modes, mode)
-        if (str_value is None):
-            return None
-        
-        return str_value    
+        return self._preset_mode
 
     @preset_mode.setter
     def preset_mode(self, value: str) -> None:
-        key: str = None
-
-        if self._wind_type is not None:
-            key = WINDTYPE_KEY
-        elif self._wind_mode is not None:
-            key = WIND_MODE_KEY
+        """Set the preset mode."""
+        if value in self.preset_modes:
+            self._send_command("mode", value)
         else:
-            raise NotImplementedError("Attempting to set preset_mode on a device that doesn't support.")
-
-        numeric_value = Helpers.value_from_name(self._preset_modes, value)
-        if numeric_value is not None:
-            self._send_command(key, numeric_value)
-        else:
-            raise ValueError(f"Preset mode {value} is not in the acceptable list: {self.preset_modes}")
+            raise ValueError(f"{value} is not a valid preset_mode.")
 
     @property
     def temperature(self):
@@ -312,10 +238,10 @@ class PyDreoFanBase(PyDreoBaseDevice):
         _LOGGER.debug("PyDreoFanBase:update_state")
         super().update_state(state)
 
-        power_on = self.get_state_update_value(state, POWERON_KEY)
+        power_on = self.get_state_update_value(state, DreoApiKeys.POWER_SWITCH)
         if power_on is not None:
             self._is_on = power_on
-            self._power_on_key = POWERON_KEY
+            self._power_on_key = DreoApiKeys.POWER_SWITCH
         else:
             # If power_on is not in the state, we need to check if the fan is on or off.
             fan_on = self.get_state_update_value(state, FANON_KEY)
@@ -333,8 +259,7 @@ class PyDreoFanBase(PyDreoBaseDevice):
         self._temperature = self.get_state_update_value(state, TEMPERATURE_KEY)
         self._led_always_on = self.get_state_update_value(state, LEDALWAYSON_KEY)
         self._voice_on = self.get_state_update_value(state, VOICEON_KEY)
-        self._wind_type = self.get_state_update_value(state, WINDTYPE_KEY)
-        self._wind_mode = self.get_state_update_value(state, WIND_MODE_KEY)
+        self._preset_mode = self.get_state_update_value(state, DreoApiKeys.MODE)
         self._light_sensor_on = self.get_state_update_value(state, LIGHTSENSORON_KEY)
         self._mute_on = self.get_state_update_value(state, MUTEON_KEY)
         self._pm25 = self.get_state_update_value(state, PM25_KEY)

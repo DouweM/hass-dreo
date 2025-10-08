@@ -22,11 +22,8 @@ class TestDiagnostics(IntegrationTestBase):
         diag = diagnostics._get_diagnostics(self.pydreo_manager) # pylint: disable=protected-access
         dreo = diag.get("dreo")
         assert(dreo.get("device_count") == 2)
-        raw_device_list = dreo.get("raw_devicelist").get("data")
-        assert raw_device_list.get("totalNum") == 2
-        assert raw_device_list.get("list")[0].get("deviceName") == "Pilot Pro S"
-        assert raw_device_list.get("list")[0].get("sn") == "**REDACTED**"
-        assert raw_device_list.get("list")[0].get("productId") == "**REDACTED**"
-
-        assert raw_device_list.get("list")[1].get("deviceName") == "Electric AC"
+        raw_device_list = dreo.get("raw_devicelist")
+        assert len(raw_device_list) == 2
+        assert raw_device_list[0].get("deviceName") == "Main Bedroom Fan"
+        assert raw_device_list[0].get("deviceSn") == "**REDACTED**"
 

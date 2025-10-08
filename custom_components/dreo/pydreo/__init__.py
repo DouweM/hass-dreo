@@ -5,11 +5,14 @@
 import logging
 import threading
 import sys
+import hashlib
 
 import json
 from itertools import chain
 from typing import Optional, Tuple
 from asyncio.exceptions import CancelledError
+
+from pydreo.client import DreoClient 
 
 from .constant import *
 from .helpers import Helpers
@@ -46,10 +49,10 @@ _DREO_DEVICE_TYPE_TO_CLASS = {
 class PyDreo:  # pylint: disable=function-redefined
     """Dreo API functions."""
 
-    def __init__(self, 
-                 username, 
-                 password, 
-                 redact=True, 
+    def __init__(self,
+                 username,
+                 password,
+                 redact=True,
                  debug_test_mode=False,
                  debug_test_mode_payload=None) -> None:
         self._transport = CommandTransport(self._transport_consume_message)
@@ -71,9 +74,17 @@ class PyDreo:  # pylint: disable=function-redefined
         self._dev_list = {}
         self._device_list_by_sn = {}
         self.devices: list[PyDreoBaseDevice] = []
-        
+
         self.debug_test_mode : bool = debug_test_mode
         self.debug_test_mode_payload : dict = debug_test_mode_payload
+
+        # Initialize the new pydreo-cloud client
+        self._cloud_client : DreoClient = None
+        if not debug_test_mode:
+           # MD5 hash the password for the new API
+            hashed_password = hashlib.md5(password.encode()).hexdigest()
+            self._cloud_client = DreoClient(username=username, password=hashed_password)
+            _LOGGER.info("Using pydreo-cloud SDK")
 
         if self.debug_test_mode:
             _LOGGER.error("Debug Test Mode is enabled!")
@@ -115,23 +126,14 @@ class PyDreo:  # pylint: disable=function-redefined
             Helpers.shouldredact = False
         self._redact = new_flag
 
-    def add_dev_test(self, new_dev: dict) -> bool:
-        """Test if new device should be added - True = Add."""
-        if "cid" in new_dev:
-            for _, v in self._dev_list.items():
-                for dev in v:
-                    if dev.deviceId == new_dev.get(DEVICEID_KEY):
-                        return False
-        return True
-
     @staticmethod
     def set_dev_id(devices: list) -> list:
         """Correct devices without cid or uuid."""
         dev_num = 0
         dev_rem = []
         for dev in devices:
-            if dev.get(DEVICEID_KEY) is not None:
-                dev[DEVICEID_KEY] = dev[DEVICEID_KEY]
+            if dev.get(DEVICESN_KEY) is not None:
+                dev[DEVICESN_KEY] = dev[DEVICESN_KEY]
             dev_num += 1
             if dev_rem:
                 devices = [i for j, i in enumerate(devices) if j not in dev_rem]
@@ -153,12 +155,7 @@ class PyDreo:  # pylint: disable=function-redefined
             return False
         if num_devices == 0:
             _LOGGER.debug("New device list initialized")
-        # else:
-        #    self.remove_old_devices(devices)
 
-        # devices[:] = [x for x in devices if self.add_dev_test(x)]
-
-        # detail_keys = ['deviceType', 'deviceName', 'deviceStatus']
         for dev in devices:
             # Get the state of the device...separate API call...boo
             try:
@@ -222,20 +219,24 @@ class PyDreo:  # pylint: disable=function-redefined
 
         if self.debug_test_mode:
             _LOGGER.debug("Debug Test Mode is enabled.  Using test payload.")
-            response = self.debug_test_mode_payload.get("get_devices", None)    
+            response = self.debug_test_mode_payload.get("get_devices", None)
         else:
-            response, _ = self.call_dreo_api(DREO_API_DEVICELIST)
+            # Use pydreo-cloud SDK
+            try:
+                response = self._cloud_client.get_devices()
+                _LOGGER.debug("Response: %s", Helpers.redactor(json.dumps(response, indent=2)))
+            except Exception as e:
+                _LOGGER.error("Error retrieving device list with pydreo-cloud SDK: %s", str(e))
+                self.in_process = False
+                return False
 
         # Stash the raw response for use by the diagnostics system, so we don't have to pull
         # logs
         self.raw_response = response
 
-        if response and Helpers.code_check(response):
-            if DATA_KEY in response and LIST_KEY in response[DATA_KEY]:
-                device_list = response[DATA_KEY][LIST_KEY]
-                proc_return = self._process_devices(device_list)
-            else:
-                _LOGGER.error("Device list in response not found")
+        if response:
+            device_list = response
+            proc_return = self._process_devices(device_list)
         else:
             _LOGGER.warning("Error retrieving device list")
 
@@ -256,22 +257,24 @@ class PyDreo:  # pylint: disable=function-redefined
 
         if self.debug_test_mode:
             _LOGGER.debug("Debug Test Mode is enabled.  Using test payload.")
-            response = self.debug_test_mode_payload.get(device.serial_number, None)    
+            response = self.debug_test_mode_payload.get(device.serial_number, None)
         else:
-            response, _ = self.call_dreo_api(
-                DREO_API_DEVICESTATE, {DEVICESN_KEY: device.serial_number}
-            )
+            # Use pydreo-cloud SDK
+            try:
+                response = self._cloud_client.get_status(device.serial_number)
+                _LOGGER.debug("Response: %s", Helpers.redactor(json.dumps(response, indent=2)))
+            except Exception as e:
+                _LOGGER.error("Error retrieving device state with pydreo-cloud SDK: %s", str(e))
+                self.in_process = False
+                return False
 
         # stash the raw return value from the devicestate api call
         device.raw_state = response
 
-        if response and Helpers.code_check(response):
-            if DATA_KEY in response and MIXED_KEY in response[DATA_KEY]:
-                device_state = response[DATA_KEY][MIXED_KEY]
-                device.update_state(device_state)
-                proc_return = True
-            else:
-                _LOGGER.error("Mixed state in response not found")
+        if response:
+            device_state = response
+            device.update_state(device_state)
+            proc_return = True
         else:
             _LOGGER.error("Error retrieving device state")
 
@@ -284,7 +287,7 @@ class PyDreo:  # pylint: disable=function-redefined
 
         if self.debug_test_mode:
             self.enabled = True
-            _LOGGER.debug("Debug Test Mode is enabled.  Skipping login.")  
+            _LOGGER.debug("Debug Test Mode is enabled.  Skipping login.")
             return True
 
         user_check = isinstance(self.username, str) and len(self.username) > 0
@@ -295,115 +298,146 @@ class PyDreo:  # pylint: disable=function-redefined
         if pass_check is False:
             _LOGGER.error("Password invalid")
             return False
-        response, _ = self.call_dreo_api(DREO_API_LOGIN)
 
-        if Helpers.code_check(response) and DATA_KEY in response:
-            # get the region code from auth
-            auth_region = response[DATA_KEY][REGION_KEY]
-            _LOGGER.info("Dreo Auth reports user region as: %s", auth_region)
-            if auth_region != self.auth_region:
-                _LOGGER.info(
-                    "Dreo Auth reports different region than current; retrying."
-                )
-                self.auth_region = auth_region
-                return self.login()
-            else:
-                self.token = response[DATA_KEY][ACCESS_TOKEN_KEY]
-                self.enabled = True
-                _LOGGER.debug("Login successful")
-                return True
-        _LOGGER.error("Error logging in with username and password")
-        return False
+        try:
+            response = self._cloud_client.login()
+            self.token = self._cloud_client.access_token
+
+            # Parse region from token (format: "token:REGION")
+            if ":" in self.token:
+                token_parts = self.token.split(":")
+                if len(token_parts) == 2:
+                    region_suffix = token_parts[1].upper()
+                    if region_suffix == "NA":
+                        self.auth_region = DREO_AUTH_REGION_NA
+                    elif region_suffix == "EU":
+                        self.auth_region = DREO_AUTH_REGION_EU
+                    _LOGGER.info("Dreo Auth reports user region as: %s", region_suffix)
+
+            self.enabled = True
+            _LOGGER.debug("Login successful with pydreo-cloud SDK")
+            return True
+        except Exception as e:
+            _LOGGER.error("Error logging in with pydreo-cloud SDK: %s", str(e))
+            return False
 
     def get_device_setting(self, device: PyDreoBaseDevice, setting : DreoDeviceSetting) -> bool | int:
-        """Get a device setting from the API."""
-        _LOGGER.debug("get_device_setting: %s(%s), enabled: %s", 
-                    device.name, 
-                    setting,
-                    self.enabled)
-        if not self.enabled:
+        """Get a device setting from the API.
+
+        Uses direct API call since pydreo-cloud SDK doesn't support settings endpoints.
+        """
+        if self.debug_test_mode:
+            _LOGGER.warning("get_device_setting: Not available in debug test mode. "
+                           "Device: %s, Setting: %s", device.name, setting)
             return None
 
-        self.in_process = True
-        setting_value = None
-        response, _ = self.call_dreo_api(
-            DREO_API_SETTING_GET, 
-            {   DEVICESN_KEY: device.serial_number,
-                DREO_API_SETTING_DATA_KEY: setting
+        if not self._cloud_client or not self._cloud_client.endpoint or not self._cloud_client.access_token:
+            _LOGGER.debug("get_device_setting: Client not authenticated or endpoint not available. "
+                         "Device: %s, Setting: %s", device.name, setting)
+            return None
+
+        try:
+            # Import Helpers from pydreo-cloud SDK
+            from pydreo.helpers import Helpers
+
+            # Clean token by removing region suffix
+            clean_token = Helpers.clean_token(self._cloud_client.access_token)
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {clean_token}",
+                "UA": "openapi/1.0.0",
             }
-        )
+            params = {
+                "deviceSn": device.serial_number,
+                "dataKey": setting,
+                "timestamp": Helpers.timestamp(),
+                "pydreover": "1.0.0",
+            }
 
-        if response and Helpers.code_check(response):
-            if DATA_KEY in response:
-                data_node = response[DATA_KEY]
-                if DREO_API_SETTING_DATA_VALUE in data_node:
-                    setting_value = data_node[DREO_API_SETTING_DATA_VALUE]
-                else:
-                    _LOGGER.error("%s key not found in returned data. %s",
-                                DREO_API_SETTING_DATA_VALUE,
-                                data_node)
-        else:
-            _LOGGER.error("Error retrieving device setting.")
+            response = Helpers.call_api(
+                self._cloud_client.endpoint + "/api/user-device/setting",
+                "get",
+                headers,
+                params
+            )
 
-        self.in_process = False
+            if response and "dataValue" in response:
+                value_str = response["dataValue"]
+                # Try to convert to int if possible
+                try:
+                    return int(value_str)
+                except ValueError:
+                    return value_str
 
-        return setting_value
-    
+            _LOGGER.debug("get_device_setting: No value returned for %s", setting)
+            return None
+
+        except Exception as e:
+            _LOGGER.error("get_device_setting failed: %s", str(e))
+            return None
+
     def set_device_setting(self, device: PyDreoBaseDevice, setting : DreoDeviceSetting, value : bool | int) -> None:
-        """Get a device setting from the API."""
-        _LOGGER.debug("set_device_setting: %s(%s=%s), enabled: %s", 
-                    device.name, 
-                    setting,
-                    value,
-                    self.enabled)
-        if not self.enabled:
-            return None
+        """Set a device setting via the API.
 
-        self.in_process = True
-        proc_return = False
-        response, _ = self.call_dreo_api(
-            DREO_API_SETTING_PUT, 
-            {   DEVICESN_KEY: device.serial_number,
-                DREO_API_SETTING_DATA_KEY: setting,
-                DREO_API_SETTING_DATA_VALUE: value
+        Uses direct API call since pydreo-cloud SDK doesn't support settings endpoints.
+        """
+        if self.debug_test_mode:
+            _LOGGER.warning("set_device_setting: Not available in debug test mode. "
+                           "Device: %s, Setting: %s, Value: %s", device.name, setting, value)
+            return False
+
+        if not self._cloud_client or not self._cloud_client.is_authenticated:
+            _LOGGER.error("set_device_setting: Client not authenticated")
+            return False
+
+        try:
+            import requests
+            from pydreo.helpers import Helpers
+            from pydreo.const import REQUEST_TIMEOUT
+
+            # Clean token by removing region suffix
+            clean_token = Helpers.clean_token(self._cloud_client.access_token)
+
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {clean_token}",
+                "UA": "openapi/1.0.0",
             }
-        )        
+            params = {
+                "timestamp": Helpers.timestamp(),
+                "pydreover": "1.0.0",
+            }
+            body = {
+                "deviceSn": device.serial_number,
+                "dataKey": setting,
+                "dataValue": str(value),
+            }
 
-        # stash the raw return value from the devicestate api call
-        device.raw_state = response
+            # Make PUT request directly since Helpers.call_api doesn't support PUT
+            response = requests.put(
+                self._cloud_client.endpoint + "/api/user-device/setting",
+                headers=headers,
+                params=params,
+                json=body,
+                timeout=REQUEST_TIMEOUT
+            )
 
-        if response and Helpers.code_check(response):
-            if DATA_KEY in response and MIXED_KEY in response[DATA_KEY]:
-                device_state = response[DATA_KEY][MIXED_KEY]
-                device.update_state(device_state)
-                proc_return = True
+            if response.status_code == 200:
+                response_body = response.json()
+                if response_body.get("code") == 0:
+                    _LOGGER.debug("set_device_setting: Success")
+                    return True
+                else:
+                    _LOGGER.error("set_device_setting: API error: %s", response_body.get("msg"))
+                    return False
             else:
-                _LOGGER.error("Mixed state in response not found")
-        else:
-            _LOGGER.error("Error retrieving device state")
+                _LOGGER.error("set_device_setting: HTTP error: %s", response.status_code)
+                return False
 
-        self.in_process = False
-
-        return proc_return
-    
-    def call_dreo_api(self, api: str, json_object: Optional[dict] = None) -> tuple:
-        """Call the Dreo API. This is used for login and the initial device list and states as well
-           as device settings."""
-        _LOGGER.debug("Calling Dreo API: {%s}", api)
-        api_url = DREO_API_URL_FORMAT.format(self.api_server_region)
-
-        if json_object is None:
-            json_object = {}
-
-        json_object_full = {**Helpers.req_body(self, api), **json_object}
-
-        return Helpers.call_api(
-            api_url,
-            DREO_APIS[api][DREO_API_PATH],
-            DREO_APIS[api][DREO_API_METHOD],
-            json_object_full,
-            Helpers.req_headers(self),
-        )
+        except Exception as e:
+            _LOGGER.error("set_device_setting failed: %s", str(e))
+            return False
 
     def start_transport(self) -> None:
         """Initialize the websocket and start transport"""
@@ -436,21 +470,21 @@ class PyDreo:  # pylint: disable=function-redefined
             _LOGGER.debug("Message: %s", message)
 
     def send_command(self, device: PyDreoBaseDevice, params) -> None:
-        """Send a command to Dreo servers via the WebSocket."""
-        full_params = {
-            "devicesn": device.serial_number,
-            "method": "control",
-            "params": params,
-            "timestamp": Helpers.api_timestamp(),
-        }
-        content = json.dumps(full_params)
-        _LOGGER.debug(content)
+        """Send a command to Dreo servers via REST API."""
+        _LOGGER.debug("Sending command to device %s: %s", device.serial_number, params)
 
         if self.debug_test_mode:
             _LOGGER.debug("Debug Test Mode is enabled.  Pretending we received the message...")
-            self._transport_consume_message({"devicesn": device.serial_number, 
-                                             "method": "report", 
+            self._transport_consume_message({"devicesn": device.serial_number,
+                                             "method": "report",
                                              "reported": params})
         else:
-            # Send the message to the transport, which will then send it to the Dreo servers
-            self._transport.send_message(content)
+            # Use pydreo-cloud SDK to send command via REST API
+            try:
+                response = self._cloud_client.update_status(device.serial_number, **params)
+                _LOGGER.debug("Command sent successfully: %s", response)
+                # Update device state with the response
+                if response:
+                    device.update_state(response)
+            except Exception as e:
+                _LOGGER.error("Error sending command with pydreo-cloud SDK: %s", str(e))

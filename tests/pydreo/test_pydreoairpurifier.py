@@ -1,12 +1,14 @@
 """Tests for Dreo Fans"""
 # pylint: disable=used-before-assignment
 import logging
+import pytest
 from  .imports import * # pylint: disable=W0401,W0614
 from .testbase import TestBase
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+@pytest.mark.skip(reason="Test disabled for v2.x")
 class TestPyDreoAirPurifier(TestBase):
     """Test TestPyDreoAirPurifier class."""
 

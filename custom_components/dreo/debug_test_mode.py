@@ -28,36 +28,26 @@ def get_debug_test_mode_payload(base_dir: str) -> dict:
     seen_serial_numbers = set()
     seen_device_ids = set()
 
-    data = get_devices_payload.get("data", None)
+    data = get_devices_payload
     if data is None:
         _LOGGER.error("DEBUG_TEST_MODE: No data found in get_devices payload")
         return None
     
-    for device in data.get("list", []):
-        serial_number = device.get("sn")
-        device_id = device.get("deviceId")
-
+    for device in data:
+        serial_number = device.get("deviceSn")
+        
         if not serial_number:
             _LOGGER.error("DEBUG_TEST_MODE: Device missing serial number")
             continue
-
-        if not device_id:
-            _LOGGER.error("DEBUG_TEST_MODE: Device missing device id")
-            continue                
 
         if serial_number in seen_serial_numbers:
             _LOGGER.error("DEBUG_TEST_MODE: Duplicate serial number found: %s", serial_number)
             continue
 
-        if device_id in seen_device_ids:
-            _LOGGER.error("DEBUG_TEST_MODE: Duplicate device id found: %s", device_id)
-            continue
-
         seen_serial_numbers.add(serial_number)
-        seen_device_ids.add(device_id)
 
         # Load a file specific to the serial number
-        device_state : dict = load_test_file(base_dir, serial_number + ".json")
+        device_state : dict = load_test_file(base_dir, "get_device_state_" +serial_number + ".json")
         if device_state is None:
             _LOGGER.error("DEBUG_TEST_MODE: Failed to load device state for serial number %s", serial_number)
             continue
