@@ -58,9 +58,12 @@ class TestDreoAirCirculator(IntegrationTestBase):
             assert len(self.pydreo_manager.devices) == 1
             
             pydreo_fan = self.pydreo_manager.devices[0]
+            assert pydreo_fan.fan_speed == 7
+
             ha_fan = fan.DreoFanHA(pydreo_fan)
             assert ha_fan.is_on is False
             assert ha_fan.speed_count == 9
+            assert ha_fan.percentage == 77
             assert ha_fan.supported_features & FanEntityFeature.OSCILLATE
 
             with patch(PATCH_SEND_COMMAND) as mock_send_command:    

@@ -17,11 +17,20 @@ class DreoApiKeys(StrEnum):
     """Dreo API Keys."""
 
     SPEED_RANGE = "speed_range"
+    SPEED = "speed"
     PRESET_MODES = "preset_modes"
     MODE = "mode"
 
     POWER_SWITCH = "power_switch"
     OSCILLATE = "oscillate"
+    OSCILLATION_MODE = "oscmode"
+
+class DreoOscillationModes(StrEnum):
+    """Dreo Oscillation Modes."""
+    FIXED = "fixed"
+    HORIZONTAL = "horizontal"
+    VERTICAL = "vertical"
+    BOTH = "both"
 
 class DreoApiResponseParser:
     """Dreo API Response Parser."""

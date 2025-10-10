@@ -20,6 +20,7 @@ from .constant import (
 
 from .pydreofanbase import PyDreoFanBase
 from .models import DreoDeviceDetails
+from .dreoapiresponseparser import DreoApiKeys, DreoOscillationModes
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
@@ -125,17 +126,23 @@ class PyDreoAirCirculator(PyDreoFanBase):
 
     @horizontally_oscillating.setter
     def horizontally_oscillating(self, value: bool) -> None:
-        """Enable or disable vertical oscillation"""
+        """Enable or disable horizontal oscillation"""
         _LOGGER.debug("PyDreoAirCirculator:horizontally_oscillating.setter")
-        if self._horizontally_oscillating is not None:
-            self._send_command(HORIZONTAL_OSCILLATION_KEY, value)
-        elif self._osc_mode is not None:
-            osc_computed = None
+        if self._osc_mode is not None:
+            new_osc_mode : DreoOscillationModes | None = None
             if value:
-                osc_computed = self._osc_mode | OscillationMode.HORIZONTAL
+                if self._osc_mode == DreoOscillationModes.FIXED:
+                    new_osc_mode = DreoOscillationModes.HORIZONTAL
+                elif self._osc_mode == DreoOscillationModes.VERTICAL:
+                    new_osc_mode = DreoOscillationModes.BOTH
             else:
-                osc_computed = self._osc_mode & ~OscillationMode.HORIZONTAL
-            self._send_command(OSCMODE_KEY, osc_computed)
+                if self._osc_mode == DreoOscillationModes.HORIZONTAL:
+                    new_osc_mode = DreoOscillationModes.FIXED
+                elif self._osc_mode == DreoOscillationModes.BOTH:
+                    new_osc_mode = DreoOscillationModes.VERTICAL
+
+            if new_osc_mode is not None:
+                self._send_command(DreoApiKeys.OSCILLATION_MODE, new_osc_mode)
         else:
             raise NotImplementedError("Horizontal oscillation is not supported.")
 
@@ -160,17 +167,25 @@ class PyDreoAirCirculator(PyDreoFanBase):
     @vertically_oscillating.setter
     def vertically_oscillating(self, value: bool) -> None:
         """Enable or disable vertical oscillation"""
-        if self._horizontally_oscillating is not None:
-            self._send_command(VERTICAL_OSCILLATION_KEY, value)
-        elif self._osc_mode is not None:
-            osc_computed = None
+        _LOGGER.debug("PyDreoAirCirculator:vertically_oscillating.setter")
+        if self._osc_mode is not None:
+            new_osc_mode : DreoOscillationModes | None = None
             if value:
-                osc_computed = self._osc_mode | OscillationMode.VERTICAL
+                if self._osc_mode == DreoOscillationModes.FIXED:
+                    new_osc_mode = DreoOscillationModes.VERTICAL
+                elif self._osc_mode == DreoOscillationModes.HORIZONTAL:
+                    new_osc_mode = DreoOscillationModes.BOTH
             else:
-                osc_computed = self._osc_mode & ~OscillationMode.VERTICAL
-            self._send_command(OSCMODE_KEY, osc_computed)
+                if self._osc_mode == DreoOscillationModes.VERTICAL:
+                    new_osc_mode = DreoOscillationModes.FIXED
+                elif self._osc_mode == DreoOscillationModes.BOTH:
+                    new_osc_mode = DreoOscillationModes.HORIZONTAL
+                    
+            if new_osc_mode is not None:
+                self._send_command(DreoApiKeys.OSCILLATION_MODE, new_osc_mode)
         else:
             raise NotImplementedError("Vertical oscillation is not supported.")
+
 
     @property
     def vertical_osc_angle_top_range(self):
@@ -321,15 +336,7 @@ class PyDreoAirCirculator(PyDreoFanBase):
         _LOGGER.debug("PyDreoAirCirculator:handle_server_update")
         super().handle_server_update(message)
 
-        val_horiz_oscillation = self.get_server_update_key_value(message, HORIZONTAL_OSCILLATION_KEY)
-        if isinstance(val_horiz_oscillation, bool):
-            self._horizontally_oscillating = val_horiz_oscillation
-
-        val_vert_oscillation = self.get_server_update_key_value(message, VERTICAL_OSCILLATION_KEY)
-        if isinstance(val_vert_oscillation, bool):
-            self._vertically_oscillating = val_vert_oscillation
-
-        val_osc_mode = self.get_server_update_key_value(message, OSCMODE_KEY)
+        val_osc_mode = self.get_server_update_key_value(message, DreoApiKeys.OSCILLATION_MODE)
         if isinstance(val_osc_mode, int):
             self._osc_mode = val_osc_mode
 

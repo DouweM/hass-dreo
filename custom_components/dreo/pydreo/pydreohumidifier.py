@@ -62,8 +62,6 @@ class PyDreoHumidifier(PyDreoBaseDevice):
         super().__init__(device_definition, details, dreo)
 
         self._modes = device_definition.preset_modes
-        if (self._modes is None):
-            self._modes = self.parse_modes(details)
 
         self._mode = None
         self._mute_on = None

@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Dict
 from .constant import (
     LOGGER_NAME,
     FANON_KEY,
-    WINDLEVEL_KEY,
     TEMPERATURE_KEY,
     LEDALWAYSON_KEY,
     VOICEON_KEY,
@@ -94,7 +93,7 @@ class PyDreoFanBase(PyDreoBaseDevice):
                           fan_speed,
                           self._speed_range)
             raise ValueError(f"fan_speed must be between {self._speed_range[0]} and {self._speed_range[1]}")
-        self._send_command(WINDLEVEL_KEY, fan_speed)
+        self._send_command(DreoApiKeys.SPEED, fan_speed)
 
     @property
     def preset_mode(self):
@@ -252,7 +251,7 @@ class PyDreoFanBase(PyDreoBaseDevice):
                 _LOGGER.error("Unable to get power on state from state. Check debug logs for more information.")
                 self._power_on_key = None
                 
-        self._fan_speed = self.get_state_update_value(state, WINDLEVEL_KEY)
+        self._fan_speed = self.get_state_update_value(state, DreoApiKeys.SPEED)
         if self._fan_speed is None:
             _LOGGER.error("Unable to get fan speed from state. Check debug logs for more information.")
 
@@ -284,7 +283,7 @@ class PyDreoFanBase(PyDreoBaseDevice):
 
     def _handle_fan_properties_update(self, message):
         """Handle common fan properties"""
-        val_wind_level = self.get_server_update_key_value(message, WINDLEVEL_KEY)
+        val_wind_level = self.get_server_update_key_value(message, DreoApiKeys.SPEED)
         if isinstance(val_wind_level, int):
             self._fan_speed = val_wind_level
 
