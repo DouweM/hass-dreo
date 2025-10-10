@@ -114,6 +114,7 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry) -> b
         platforms.add(Platform.SWITCH)
         platforms.add(Platform.NUMBER)
 
+    _LOGGER.debug("Starting the transport")
     pydreo_manager.start_transport()
 
     hass.data[DOMAIN] = {}

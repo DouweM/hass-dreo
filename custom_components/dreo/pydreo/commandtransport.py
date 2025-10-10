@@ -15,6 +15,7 @@ import websockets
 from .constant import * # pylint: disable=W0401,W0614
 from .helpers import Helpers
 from .models import * # pylint: disable=W0401,W0614
+from pydreo.helpers import Helpers as PydreoHelpers
 
 _LOGGER = logging.getLogger(LOGGER_NAME)
 
@@ -23,6 +24,8 @@ class CommandTransport:
 
     def __init__(self, 
                  recv_callback: Callable[[dict], None] ):
+
+        _LOGGER.debug("CommandTransport::__init__")
 
         self._event_thread = None
         self._ws = None
@@ -52,13 +55,13 @@ class CommandTransport:
                         api_server_region: str,
                         token: str) -> None:
         """Initialize the websocket and start monitoring"""
-        
+        _LOGGER.debug("CommandTransport::start_transport - Initializing transport")
         if self._event_thread is not None and self._event_thread.is_alive():
             _LOGGER.warning("Transport already started")
             return
 
         self._api_server_region = api_server_region
-        self._token = token
+        self._token = PydreoHelpers.clean_token(token)
         self._transport_enabled = True
         self._signal_close = False
 
@@ -89,7 +92,8 @@ class CommandTransport:
         # open websocket
         url = f"wss://wsb-{self._api_server_region}.dreo-tech.com/websocket?accessToken={self._token}&timestamp={Helpers.api_timestamp()}"
         async for ws in websockets.connect(url):
-            
+            _LOGGER.debug("CommandTransport::_start_websocket - WebSocket connected")
+
             if self._signal_close:
                 _LOGGER.info("Transport has been stopped")
                 break # This break causes us not to connect
